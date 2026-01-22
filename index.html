@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8" />
+  <title>Flight Monitor</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    body { font-family: Arial; padding: 20px; }
+    input, button { font-size: 16px; padding: 10px; width: 100%; }
+    .card { margin-top: 15px; padding: 15px; border: 1px solid #ccc; }
+  </style>
+</head>
+
+<body>
+
+<h2>✈️ Flight Monitor</h2>
+
+<input id="reg" placeholder="Enter aircraft registration (e.g. VT-ANQ)">
+<button onclick="start()">Start Monitoring</button>
+
+<div class="card" id="status"></div>
+
+<script>
+const BACKEND = "https://YOUR-BACKEND-URL"; // <-- replace this
+
+let lastState = null;
+
+function speak(text) {
+  speechSynthesis.speak(new SpeechSynthesisUtterance(text));
+}
+
+async function start() {
+  const reg = document.getElementById("reg").value;
+  if (!reg) return alert("Enter registration");
+
+  const res = await fetch(`${BACKEND}/aircraft/${reg}`);
+  const data = await res.json();
+  const icao24 = data.icao24;
+
+  speak("Monitoring started");
+  poll(icao24);
+  setInterval(() => poll(icao24), 10 * 60 * 1000); // 10 minutes
+}
+
+async function poll(icao24) {
+  const res = await fetch(`${BACKEND}/flight/${icao24}`);
+  const data = await res.json();
+
+  const s = data.state;
+  document.getElementById("status").innerHTML = `
+    <b>Altitude:</b> ${s.altitude}<br>
+    <b>Speed:</b> ${s.ground_speed}<br>
+    <b>Vertical rate:</b> ${s.vertical_rate}<br>
+    <b>Squawk:</b> ${s.squawk}<br>
+    <b>On ground:</b> ${s.on_ground}
+  `;
+
+  data.alerts.forEach(a => speak(a));
+}
+</script>
+
+</body>
+</html>
